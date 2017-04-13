@@ -18,16 +18,24 @@
  */
 package com.taobao.weex.dom.action;
 
+import android.text.TextUtils;
+
 import com.alibaba.fastjson.JSONObject;
 import com.taobao.weex.WXSDKInstance;
 import com.taobao.weex.adapter.IWXUserTrackAdapter;
+import com.taobao.weex.common.Constants;
 import com.taobao.weex.common.WXErrorCode;
 import com.taobao.weex.dom.DOMActionContext;
 import com.taobao.weex.dom.RenderActionContext;
 import com.taobao.weex.dom.WXDomObject;
+import com.taobao.weex.dom.WXStyle;
 import com.taobao.weex.ui.component.WXComponent;
+import com.taobao.weex.ui.component.WXDiv;
 import com.taobao.weex.ui.component.WXVContainer;
 import com.taobao.weex.utils.WXLogUtils;
+
+import java.util.Map;
+
 
 /**
  * Created by sospartan on 22/02/2017.
@@ -97,6 +105,10 @@ final class AddElementAction extends AbstractAddElementAction {
       if (parent == null || component == null) {
         return;
       }
+      //TODO
+      if(ActionUtils.needMarkVirtual(component)){
+        component.setVirtual(true);
+      }
 
       parent.addChild(component, mAddIndex);
       parent.createChildViewAt(mAddIndex);
@@ -106,4 +118,8 @@ final class AddElementAction extends AbstractAddElementAction {
       WXLogUtils.e("add component failed.", e);
     }
   }
+
+
+
+
 }

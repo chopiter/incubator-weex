@@ -234,4 +234,12 @@ public class Spacing /**implements Cloneable**/
   //		return null;
   //	}
 
+  public static Spacing merge(Spacing spacing1,Spacing spacing2){
+    Spacing spacing = new Spacing();
+    spacing.set(LEFT,spacing1.get(LEFT) + spacing2.get(LEFT));
+    spacing.set(TOP,spacing1.get(TOP) + spacing2.get(TOP));
+    spacing.set(RIGHT,spacing1.get(RIGHT) + spacing2.get(RIGHT));
+    spacing.set(BOTTOM,spacing1.get(BOTTOM) + spacing2.get(BOTTOM));
+    return spacing;
+  }
 }

@@ -32,8 +32,12 @@ import com.taobao.weex.dom.RenderActionContext;
 import com.taobao.weex.dom.WXDomObject;
 import com.taobao.weex.dom.flex.Spacing;
 import com.taobao.weex.ui.component.WXComponent;
+import com.taobao.weex.ui.component.WXVContainer;
 
 import java.util.Map;
+
+import static com.taobao.weex.dom.action.ActionUtils.isVirtualSwitch;
+import static com.taobao.weex.dom.action.ActionUtils.styleVirtualSwitch;
 
 /**
  * Created by sospartan on 28/02/2017.
@@ -96,6 +100,32 @@ class UpdateStyleAction implements DOMAction, RenderAction {
     if (component == null) {
       return;
     }
+
+    if(isVirtualSwitch && styleVirtualSwitch){
+      //TODO
+      if(component.isVirtual()){
+        if(!ActionUtils.needMarkVirtual(component,mData)){
+          component.setVirtual(false);
+          ((WXVContainer) component).updateChild();
+          component.applyLayoutAndEvent(component);
+        }
+      }else {
+        if(ActionUtils.needMarkVirtual(component,mData)){
+          component.setVirtual(true);
+          ((WXVContainer) component).updateChild();
+          component.applyLayoutAndEvent(component);
+        }
+      }
+      realUpdate(component);
+    }else {
+      realUpdate(component);
+    }
+
+
+
+  }
+
+  private void realUpdate(WXComponent component ){
     component.updateProperties(mData);
 
     if (mData.containsKey(Constants.Name.PADDING) ||

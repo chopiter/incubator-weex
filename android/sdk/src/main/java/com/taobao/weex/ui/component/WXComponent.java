@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -34,7 +34,9 @@ import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewCompat;
+import android.text.StaticLayout;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,10 +53,12 @@ import com.taobao.weex.common.Constants;
 import com.taobao.weex.common.IWXObject;
 import com.taobao.weex.common.WXRuntimeException;
 import com.taobao.weex.dom.ImmutableDomObject;
+import com.taobao.weex.dom.WXAttr;
 import com.taobao.weex.dom.WXDomHandler;
 import com.taobao.weex.dom.WXDomObject;
 import com.taobao.weex.dom.WXDomTask;
 import com.taobao.weex.dom.WXStyle;
+import com.taobao.weex.dom.action.ActionUtils;
 import com.taobao.weex.dom.action.Actions;
 import com.taobao.weex.dom.flex.Spacing;
 import com.taobao.weex.ui.IFComponentHolder;
@@ -389,6 +393,71 @@ public abstract class  WXComponent<T extends View> implements IWXObject, IWXActi
     return mBackgroundDrawable;
   }
 
+  private WXVContainer getRealParent(){
+    WXVContainer parent = getParent();
+    while (parent.isVirtual()){
+      parent = parent.getParent();
+    }
+    return parent;
+  }
+  private int getChildrenLayoutTopOffsetFromParent(){
+    if(mParent != null && mParent.isVirtual() && !isVirtual){
+      int offset = mParent.getChildrenLayoutTopOffset() + mParent.getParent().getChildrenLayoutTopOffset();
+      WXVContainer parent = mParent.getParent();
+      while (parent.isVirtual()){
+        offset += parent.getParent().getChildrenLayoutTopOffset();
+        parent = parent.getParent();
+      }
+      return offset;
+    }else {
+      return mParent.getChildrenLayoutTopOffset();
+    }
+  }
+  private Spacing getParentBorder(){
+    if(mParent != null && mParent.isVirtual() && !isVirtual){
+      WXVContainer parent = getRealParent();
+      return parent.getDomObject().getBorder();
+    }else {
+      return mParent.getDomObject().getBorder();
+    }
+  }
+  private Spacing getParentPadding(){
+    if(mParent != null && mParent.isVirtual() && !isVirtual){
+
+      WXVContainer parent = getRealParent();
+      return parent.getDomObject().getPadding();
+    }else {
+      return mParent.getDomObject().getPadding();
+    }
+  }
+  private float getLayoutX(){
+    if(mParent != null && mParent.isVirtual() && !isVirtual){
+      float layoutX = mDomObj.getLayoutX() + mParent.getDomObject().getLayoutX();
+      WXVContainer parent = mParent.getParent();
+      while (parent.isVirtual()){
+        layoutX += parent.getDomObject().getLayoutX();
+        parent = parent.getParent();
+      }
+      return layoutX;
+    }else {
+      return mDomObj.getLayoutX();
+    }
+  }
+
+  private float getLayoutY(){
+    if(mParent != null && mParent.isVirtual() && !isVirtual){
+      float layoutY = mDomObj.getLayoutY() + mParent.getDomObject().getLayoutY();
+      WXVContainer parent = mParent.getParent();
+      while (parent.isVirtual()){
+        layoutY += parent.getDomObject().getLayoutY();
+        parent = parent.getParent();
+      }
+      return layoutY;
+    }else {
+      return mDomObj.getLayoutY();
+    }
+  }
+
   /**
    * layout view
    */
@@ -396,35 +465,72 @@ public abstract class  WXComponent<T extends View> implements IWXObject, IWXActi
     if ( domObject == null || TextUtils.isEmpty(mCurrentRef)) {
       return;
     }
+    boolean isFisrtDebugText = false;
+    try {
+      if(mParent != null && this instanceof WXText && mParent.getParent() instanceof WXDiv && mParent.getParent().getParent() instanceof WXDiv){
+        CharSequence text = ((StaticLayout)domObject.getExtra()).getText();
+        if("some text".equals(text.toString().trim()) ){
+          isFisrtDebugText = true;
+        }
+      }
+    }catch (Exception e){}
 
+
+    //TODO find vir parent
+    WXAttr attr = domObject.getAttrs();
+    if("aaa".equals(attr.get("prop1"))){
+      toString();
+    }
+
+    //TODO test
     boolean nullParent = mParent == null;//parent is nullable
     mDomObj = domObject;
 
     //offset by sibling
-    int siblingOffset = nullParent?0:mParent.getChildrenLayoutTopOffset();
+    int siblingOffset = nullParent?0:getChildrenLayoutTopOffsetFromParent();
 
-    Spacing parentPadding = (nullParent?new Spacing():mParent.getDomObject().getPadding());
-    Spacing parentBorder = (nullParent?new Spacing():mParent.getDomObject().getBorder());
-    Spacing margin = mDomObj.getMargin();
+    Spacing parentPadding = (nullParent?new Spacing():getParentPadding());
+    Spacing parentBorder = (nullParent?new Spacing():getParentBorder());
+
+
     int realWidth = (int) mDomObj.getLayoutWidth();
     int realHeight = (int) mDomObj.getLayoutHeight();
-    int realLeft = (int) (mDomObj.getLayoutX() - parentPadding.get(Spacing.LEFT) -
+
+    Spacing margin = mDomObj.getMargin();
+
+
+
+//    Log.e("boze","component: " + '@' + Integer.toHexString(hashCode()) + "; realHeight: " + realHeight
+//    + "; realWidth: " + realWidth);
+
+    int realLeft = (int) (getLayoutX() - parentPadding.get(Spacing.LEFT) -
                           parentBorder.get(Spacing.LEFT));
-    int realTop = (int) (mDomObj.getLayoutY() - parentPadding.get(Spacing.TOP) -
+    int realTop = (int) (getLayoutY() - parentPadding.get(Spacing.TOP) -
                          parentBorder.get(Spacing.TOP)) + siblingOffset;
     int realRight = (int) margin.get(Spacing.RIGHT);
     int realBottom = (int) margin.get(Spacing.BOTTOM);
+
+//    Log.e("boze","component: " + '@' + Integer.toHexString(hashCode()) + "; realLeft: " + realLeft
+//            + "; realTop: " + realTop + "; realRight: " + realRight + "; realBottom:" + realBottom);
 
     if (mPreRealWidth == realWidth && mPreRealHeight == realHeight && mPreRealLeft == realLeft && mPreRealTop == realTop) {
       return;
     }
 
-    mAbsoluteY = (int) (nullParent?0:mParent.getAbsoluteY() + mDomObj.getLayoutY());
-    mAbsoluteX = (int) (nullParent?0:mParent.getAbsoluteX() + mDomObj.getLayoutX());
+    mAbsoluteY = (int) (nullParent?0:getRealParent().getAbsoluteY() + getLayoutY());
+    mAbsoluteX = (int) (nullParent?0:getRealParent().getAbsoluteX() + getLayoutX());
 
     //calculate first screen time
     if (!mInstance.mEnd &&!(mHost instanceof ViewGroup) && mAbsoluteY+realHeight > mInstance.getWeexHeight()+1) {
       mInstance.firstScreenRenderFinished();
+    }
+
+    //TODO force update virtual div's child
+    if(isVirtual && getClass().getName().equals(WXDiv.class.getName()) && mHost == null){
+      for(int i = 0; i < ((WXDiv)this).getChildCount(); i++){
+        WXComponent child = ((WXDiv)this).getChild(i);
+        child.setLayout(child.getDomObject());
+      }
     }
 
     if (mHost == null) {
@@ -462,7 +568,14 @@ public abstract class  WXComponent<T extends View> implements IWXObject, IWXActi
       params.setMargins(left, top, right, bottom);
       lp = params;
     }else{
-      lp = mParent.getChildLayoutParams(this,host,width, height, left,right,top,bottom);
+      WXVContainer parent = mParent;
+      while (parent != null && parent.isVirtual()){
+        parent = parent.getParent();
+      }
+      if(parent == null){
+        //TODO error
+      }
+      lp = parent.getChildLayoutParams(this,host,width, height, left,right,top,bottom);
     }
     if(lp != null) {
       mHost.setLayoutParams(lp);
@@ -1450,4 +1563,20 @@ public abstract class  WXComponent<T extends View> implements IWXObject, IWXActi
   public boolean isLayerTypeEnabled() {
     return getInstance().isLayerTypeEnabled();
   }
+  /* TODO virtual标记是否是虚拟的*/
+  private boolean isVirtual = false;
+  public boolean isVirtual(){
+    if(ActionUtils.isVirtualSwitch){
+      return isVirtual;
+    }else {
+      return false;
+    }
+
+  }
+  public void setVirtual(boolean virtual) {
+    if(ActionUtils.isVirtualSwitch){
+      isVirtual = virtual;
+    }
+  }
+
 }

@@ -23,7 +23,9 @@ import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.taobao.weappplus_sdk.R;
 import com.taobao.weex.WXSDKInstance;
+import com.taobao.weex.annotation.Component;
 import com.taobao.weex.common.Constants;
 import com.taobao.weex.dom.WXDomObject;
 
@@ -252,13 +254,85 @@ public abstract class WXVContainer<T extends ViewGroup> extends WXComponent<T> {
       }
     }
     WXComponent child = getChild(indexToCreate);
+    /*TODO test*/
+    if(child.isVirtual()){
+      return;
+    }
+
     child.createView();
     if(!child.isVirtualComponent()){
-      addSubView(child.getHostView(),indexToCreate);
+      if(isVirtual()){
+        WXVContainer parent = getParent();
+        while (parent.isVirtual()){
+          parent = parent.getParent();
+        }
+        parent.addSubView(child.getHostView(),indexToCreate,this);
+      }else{
+        addSubView(child.getHostView(),indexToCreate);
+      }
     }
   }
 
-  protected void addSubView(View child, int index) {
+  public void updateChild(){
+    // 目前是virtual，把children移到parent上
+    if(isVirtual()){
+      WXVContainer parent = getParent();
+      while (parent.isVirtual()){
+        parent = parent.getParent();
+      }
+      for(WXComponent child : mChildren){
+        if(child.isVirtual()){
+          continue;
+        }
+        if(child.getHostView() == null){
+          child.createView();
+        }
+        if(!child.isVirtualComponent()){
+          if(((ViewGroup)parent.getHostView()).indexOfChild(child.getHostView()) == -1){
+            if(child.getHostView().getParent() != null){
+              ((ViewGroup)child.getHostView().getParent()).removeView(child.getHostView());
+            }
+            parent.addSubView(child.getHostView(),-1,this);
+            if(getHostView().getParent() != null){
+              ((ViewGroup)(getHostView().getParent())).removeView(getHostView());
+            }
+          }
+        }
+
+      }
+    } else {//目前不是virtual，把不属于parent上的view移下来
+      WXVContainer parent = getParent();
+      while (parent.isVirtual()){
+        parent = parent.getParent();
+      }
+      int childCount = ((ViewGroup)parent.getHostView()).getChildCount();
+      for(int i = 0; i < childCount; i++ ){
+        View childView = ((ViewGroup) parent.getHostView()).getChildAt(i);
+        WXVContainer container = (WXVContainer) childView.getTag(R.id.weex_realContainer);
+        if(container != null && container != parent){//child 是否真正属于parent
+          if(container == this){//child的真正父布局是当前container
+            if(mHost == null){
+              //mChildren可能不是空，这里不需要在createView时创建子View，所以先清空
+              ArrayList<WXComponent> children = (ArrayList<WXComponent>) mChildren.clone();
+              mChildren.clear();
+              createView();
+              mChildren = children;
+            }
+            ((ViewGroup) parent.getHostView()).removeView(childView);
+            if(mHost.getParent() != null){
+              ((ViewGroup)(mHost.getParent())).removeView(mHost);
+            }
+            ((ViewGroup) parent.getHostView()).addView(mHost,i);
+            addSubView(childView,-1);
+          }
+        }
+      }
+    }
+
+  }
+
+  public void addSubView(View child, int index, WXVContainer realContainer){
+    child.setTag(R.id.weex_realContainer,realContainer);
     if (child == null || getRealView() == null) {
       return;
     }
@@ -270,6 +344,10 @@ public abstract class WXVContainer<T extends ViewGroup> extends WXComponent<T> {
     } else {
       getRealView().addView(child, index);
     }
+  }
+
+  protected void addSubView(View child, int index) {
+    addSubView(child,index,this);
   }
 
   public void remove(WXComponent child, boolean destroy){

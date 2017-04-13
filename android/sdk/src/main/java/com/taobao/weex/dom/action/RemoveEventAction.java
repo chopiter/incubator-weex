@@ -29,6 +29,10 @@ import com.taobao.weex.dom.RenderActionContext;
 import com.taobao.weex.dom.WXDomObject;
 import com.taobao.weex.ui.IWXRenderTask;
 import com.taobao.weex.ui.component.WXComponent;
+import com.taobao.weex.ui.component.WXVContainer;
+
+import static com.taobao.weex.dom.action.ActionUtils.isVirtualSwitch;
+import static com.taobao.weex.dom.action.ActionUtils.styleVirtualSwitch;
 
 /**
  * Created by sospartan on 02/03/2017.
@@ -71,8 +75,24 @@ class RemoveEventAction implements DOMAction, RenderAction {
     WXComponent comp = context.getComponent(mRef);
     if(comp != null){
       //sync dom change to component
-      comp.updateDom(mUpdatedDomObject);
-      comp.removeEvent(mEvent);
+
+      if(isVirtualSwitch && styleVirtualSwitch){
+        //TODO
+        if(comp.isVirtual()){
+          comp.setVirtual(false);
+          ((WXVContainer) comp).updateChild();
+          comp.applyLayoutAndEvent(comp);
+        }else {
+          comp.updateDom(mUpdatedDomObject);
+          comp.addEvent(mEvent);
+        }
+      }else {
+        comp.updateDom(mUpdatedDomObject);
+        comp.addEvent(mEvent);
+      }
+
+
     }
   }
+
 }
