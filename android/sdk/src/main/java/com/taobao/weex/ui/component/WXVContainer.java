@@ -362,6 +362,20 @@ public abstract class WXVContainer<T extends ViewGroup> extends WXComponent<T> {
             && child.getDomObject().isFixed()){
       getInstance().removeFixedView(child.getHostView());
     }else if(getRealView() != null) {
+      //TODO
+      if(child.isVirtual()){
+        WXVContainer parent = this;
+        while (parent.isVirtual()){
+          parent = parent.getParent();
+        }
+        int parentChildCount = parent.getRealView().getChildCount();
+        for(int i = 0; i < parentChildCount; i++ ){
+          View childView = parent.getRealView().getChildAt(i);
+          if(child.equals(childView.getTag(R.id.weex_realContainer))){
+            ((ViewGroup)childView.getParent()).removeView(childView);
+          }
+        }
+      }
       if(!child.isVirtualComponent()){
         getRealView().removeView(child.getHostView());
       }else{
