@@ -254,17 +254,18 @@ public abstract class WXVContainer<T extends ViewGroup> extends WXComponent<T> {
       }
     }
     WXComponent child = getChild(indexToCreate);
-    /*TODO test*/
-    if(child.isVirtual()){
-      return;
-    }
-
     child.createView();
     if(!child.isVirtualComponent()){
       if(isVirtual()){
         WXVContainer parent = getParent();
         while (parent.isVirtual()){
           parent = parent.getParent();
+        }
+        if(index < 0){
+          indexToCreate = parent.childCount()-1;
+          if(indexToCreate < 0 ){
+            return;
+          }
         }
         parent.addSubView(child.getHostView(),indexToCreate,this);
       }else{
@@ -332,11 +333,11 @@ public abstract class WXVContainer<T extends ViewGroup> extends WXComponent<T> {
   }
 
   public void addSubView(View child, int index, WXVContainer realContainer){
-    child.setTag(R.id.weex_realContainer,realContainer);
     if (child == null || getRealView() == null) {
       return;
     }
-
+    //TODO setTag
+    child.setTag(R.id.weex_realContainer,realContainer);
     int count = getRealView().getChildCount();
     index = index >= count ? -1 : index;
     if (index == -1) {

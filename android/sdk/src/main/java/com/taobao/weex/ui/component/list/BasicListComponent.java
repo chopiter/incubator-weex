@@ -807,6 +807,7 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
               return new ListBaseViewHolder(component, viewType);
             } else {
               ((WXCell) component).lazy(false);
+              //TODO 有的lazy的View在创建时要考虑virtual的情况
               component.createView();
               component.applyLayoutAndEvent(component);
               return new ListBaseViewHolder(component, viewType);

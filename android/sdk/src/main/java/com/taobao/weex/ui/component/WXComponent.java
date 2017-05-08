@@ -984,6 +984,9 @@ public abstract class  WXComponent<T extends View> implements IWXObject, IWXActi
   }
 
   protected void createViewImpl() {
+    if(isVirtual){
+      return;
+    }
     if (mContext != null) {
       mHost = initComponentHostView(mContext);
       if (mHost == null && !isVirtualComponent()) {
